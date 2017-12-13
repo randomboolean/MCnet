@@ -1,11 +1,27 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from keras.utils import np_utils
+import pickle
+import os.path
+
+import sys
+sys.path.append('../chebnet/lib/')
 from utils import Text20News # from: https://github.com/mdeff/cnn_graph/tree/master/lib
 
 # 20news preprocessing
 # Adapted from ChebNet code, MIT License, Copyright (c) 2016 Michael Defferrard
 # We apply the exact same preprocessing.
 def load_20news(data_home, top_words=1000, sparse=False,remove_short_documents=False, verbose=False):
+  
+  # Do this processing only once and pickle it 
+  path = os.path.join(data_home,
+                      '20news_preprocessed_' + 
+                      'top' + str(top_words) +
+                      '_sparse' + str(sparse) +
+                      '_removeShorts' + str(remove_short_documents) +
+                      '.pkl')
+  if os.path.isfile(path):
+    return pickle.load(open(path, "rb"))
 
   # Fetch dataset. Scikit-learn already performs some cleaning.
   remove = ('headers','footers','quotes')  # (), ('headers') or ('headers','footers','quotes')
@@ -116,4 +132,6 @@ def load_20news(data_home, top_words=1000, sparse=False,remove_short_documents=F
   # Embeddings
   graph_data = train.embeddings.astype(np.float32)
 
-  return (input_shape, nb_classes), (X_train, X_test, Y_train, Y_test), graph_data
+  res = ((input_shape, nb_classes), (X_train, X_test, Y_train, Y_test), graph_data)
+  pickle.dump(res, open(path,"wb"))
+  return res
