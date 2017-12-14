@@ -49,6 +49,7 @@ class SeparableMonteCarloLRF(Layer):
                                                   p=self.probabilities[i,:])
         for j in xrange(self.LRF_size):
           self.LRF_getter[i, channel, j, 1] = channel
+        
   def build(self, input_shape):
     self.b, self.n, self.p = input_shape
     self.build_LRF()
@@ -163,3 +164,65 @@ class MonteCarloLRF(Layer):
     if self.use_bias:
       y += tf.reshape(self.bias, (1, 1, self.q))
     return self.activation(y)
+
+class SeparableMonteCarloMaxPooling(Layer):
+
+  def __init__(self,
+              probabilities,
+              LRF_size,
+              new_size,
+              **kwargs):
+
+    super(SeparableMonteCarloMaxPooling, self).__init__(**kwargs)
+    self.probabilities = probabilities
+    self.LRF_size = LRF_size
+    self.m = new_size
+    
+    self.LRF_built = False
+
+  def compute_output_shape(self, input_shape):
+    self.b, self.n, self.p = input_shape
+    return self.b, self.m, self.p
+
+  def build_LRF(self):
+    if self.LRF_built:
+      pass
+    
+    # check they are probabilites and diag is 0
+    assert not((np.sum(self.probabilities, axis=-1) - 1).all())
+    assert np.diag(self.probabilities).sum() == 0.
+
+    # fill up LRF_getter to be used as indices by tf.gather_nd
+    self.LRF_getter = np.zeros(shape=(self.m, self.p, self.LRF_size, 2), dtype='int32')
+    self.sub_features = np.zeros(shape=(self.m, self.p), dtype='int32')
+    
+    for channel in xrange(self.p):
+      # choose random ouput features
+      self.sub_features[:,channel] = np.random.choice(np.arange(self.n), 
+                                      size=(self.m,),
+                                      replace=False)
+      for i in xrange(self.m):
+        si = self.sub_features[i,channel]
+        self.LRF_getter[i, channel, 0, 0] = si
+        self.LRF_getter[i, channel, 1:, 0] = np.random.choice(np.arange(self.n), 
+                                                  size=(self.LRF_size - 1,),
+                                                  replace=False,
+                                                  p=self.probabilities[si,:])
+        for j in xrange(self.LRF_size):
+          self.LRF_getter[i, channel, j, 1] = channel
+    self.LRF_built = True
+  
+  def build(self, input_shape):
+    self.b, self.n, self.p = input_shape
+    self.build_LRF()
+    super(SeparableMonteCarloMaxPooling, self).build(input_shape)
+    self.input_spec = InputSpec(ndim=3)
+    self.built = True
+
+  def call(self, x):
+    # gather LRF, x(b,n,p), LRF_getter(m,p,LRF_size,2)
+    col = tf.gather_nd(tf.transpose(x, [1,2,0]), self.LRF_getter)
+    col = tf.transpose(col, [3,0,2,1])
+
+    # col(b,m,LRF_size,p) -> y(b,m,p)
+    return tf.reduce_max(col, axis=2)
