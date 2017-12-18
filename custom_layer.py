@@ -226,3 +226,51 @@ class SeparableMonteCarloMaxPooling(Layer):
 
     # col(b,m,LRF_size,p) -> y(b,m,p)
     return tf.reduce_max(col, axis=2)
+
+class SeparableMonteCarloMaxPoolingV2(Layer):
+
+  def __init__(self,
+              LRF_size,
+              new_size,
+              **kwargs):
+
+    super(SeparableMonteCarloMaxPoolingV2, self).__init__(**kwargs)
+    self.LRF_size = LRF_size
+    self.m = new_size    
+    self.LRF_built = False
+
+  def compute_output_shape(self, input_shape):
+    self.b, self.n, self.p = input_shape
+    return self.b, self.m, self.p
+
+  def build_LRF(self):
+    if self.LRF_built:
+      pass
+    
+    # fill up LRF_getter to be used as indices by tf.gather_nd
+    self.LRF_getter = np.zeros(shape=(self.m, self.p, self.LRF_size, 2), dtype='int32')
+    
+    # one random choice per channel
+    # each channel splitted
+    for channel in xrange(self.p):
+      channel_perm = np.random.permutation(self.n)
+      channel_perm = np.reshape(channel_perm[0:self.m*self.LRF_size+1], [self.m , self.LRF_size])
+      self.LRF_getter[:,channel,:,0] = channel_perm
+      self.LRF_getter[:,channel,:,1] = channel
+    self.LRF_built = True
+  
+  def build(self, input_shape):
+    self.b, self.n, self.p = input_shape
+    assert self.n >= self.LRF_size * self.m
+    self.build_LRF()
+    super(SeparableMonteCarloMaxPoolingV2, self).build(input_shape)
+    self.input_spec = InputSpec(ndim=3)
+    self.built = True
+
+  def call(self, x):
+    # gather LRF, x(b,n,p), LRF_getter(m,p,LRF_size,2)
+    col = tf.gather_nd(tf.transpose(x, [1,2,0]), self.LRF_getter)
+    col = tf.transpose(col, [3,0,2,1])
+
+    # col(b,m,LRF_size,p) -> y(b,m,p)
+    return tf.reduce_max(col, axis=2)
