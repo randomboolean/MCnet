@@ -21,7 +21,7 @@ def load_20news(data_home, top_words=1000, sparse=False,remove_short_documents=F
                       '_removeShorts' + str(remove_short_documents) +
                       '.pkl')
   if os.path.isfile(path):
-    return pickle.load(open(path, "rb"))
+    return pickle.load(open(path, "rb"), encoding='latin1')
 
   # Fetch dataset. Scikit-learn already performs some cleaning.
   remove = ('headers','footers','quotes')  # (), ('headers') or ('headers','footers','quotes')
