@@ -11,7 +11,7 @@ class SeparableMonteCarloLRF(Layer):
 
               use_bias = True,
               activation = None,
-              kernel_initializer = 'he_uniform', kernel_regularizer = None, kernel_constraint = None,
+              kernel_initializer = 'glorot_normal', kernel_regularizer = None, kernel_constraint = None,
               bias_initializer = 'zeros', bias_regularizer = None, bias_constraint = None,
               activity_regularizer = None,
               **kwargs):
@@ -35,7 +35,7 @@ class SeparableMonteCarloLRF(Layer):
 
   def build_LRF(self):
     # check they are probabilites and diag is 0
-    assert not((np.sum(self.probabilities, axis=-1) - 1).all())
+    assert ((np.sum(self.probabilities, axis=-1) - 1) < 0.000001).all()
     assert np.diag(self.probabilities).sum() == 0.
 
     # fill up LRF_getter to be used as indices by tf.gather_nd
@@ -117,7 +117,7 @@ class MonteCarloLRF(Layer):
 
   def build_LRF(self):
     # check they are probabilites and diag is 0
-    assert not((np.sum(self.probabilities, axis=-1) - 1).all())
+    assert ((np.sum(self.probabilities, axis=-1) - 1) < 0.000001).all()
     assert np.diag(self.probabilities).sum() == 0.
 
     # fill up LRF_getter to be used as indices by tf.gather_nd
@@ -201,7 +201,7 @@ class RandomLRF(Layer):
 
   def build_LRF(self):
     # check they are probabilites and diag is 0
-    assert not((np.sum(self.probabilities, axis=-1) - 1).all())
+    assert ((np.sum(self.probabilities, axis=-1) - 1) < 0.000001).all()
     assert np.diag(self.probabilities).sum() == 0.
 
     # fill up LRF_getter to be used as indices by tf.gather_nd
@@ -267,7 +267,7 @@ class SeparableMonteCarloMaxPooling(Layer):
       pass
     
     # check they are probabilites and diag is 0
-    assert not((np.sum(self.probabilities, axis=-1) - 1).all())
+    assert ((np.sum(self.probabilities, axis=-1) - 1) < 0.000001).all()
     assert np.diag(self.probabilities).sum() == 0.
 
     # fill up LRF_getter to be used as indices by tf.gather_nd
