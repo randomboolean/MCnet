@@ -29,9 +29,9 @@ import pickle
 #
 
 import sys
-if len(sys.arv) != 3:
+if len(sys.argv) != 3:
     print('wrong args')
-nb = int(sys.argv[1])
+neib = int(sys.argv[1])
 drop = float(sys.argv[2])
 
 #
